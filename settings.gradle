@@ -1,0 +1,3 @@
+rootProject.name = "BasicFrameSample"
+include ':app'
+include ':base'
