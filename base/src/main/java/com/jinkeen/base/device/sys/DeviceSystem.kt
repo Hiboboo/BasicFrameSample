@@ -1,6 +1,7 @@
 package com.jinkeen.base.device.sys
 
 import com.jinkeen.base.device.data.CardType
+import com.jinkeen.base.device.data.DeviceType
 import com.jinkeen.base.device.Device
 import com.jinkeen.base.device.SingleInstance
 
@@ -8,7 +9,7 @@ import com.jinkeen.base.device.SingleInstance
  * 对设备操作的接口。
  * ---
  * - 具体的实现类必须显式的添加[Device]注解，以对外表明这个实现类是可以对具体设备进行各种操作的。注解的名称只能是[DeviceType]中的其中一种
- * - 实现类可以是单例写法，但请务必在获取单例的方法上标记[SingleInstance]注解
+ * - 实现类建议是单例写法，但请务必在获取单例的方法上标记[SingleInstance]注解
  * - 实现类无需手动实例化，只须做好以上两种必要的注解即可
  */
 interface DeviceSystem {

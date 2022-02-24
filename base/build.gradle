@@ -51,7 +51,7 @@ publishing {
         release(MavenPublication) {
             groupId = "com.jinkeen.base"
             artifactId = "frame"
-            version = "1.0.1"
+            version = "1.0.2"
             afterEvaluate { artifact(tasks.getByName("bundleReleaseAar")) }
             artifact generateSourcesJar
             pom.withXml {
@@ -76,8 +76,8 @@ publishing {
             name = "nexus"
             url = "http://maven.jinkeen.com/repository/maven-releases/"
             credentials {
-                username = "admin"
-                password = "igj98mg899Fs"
+                username = "sunbo"
+                password = "123456789"
             }
         }
     }
@@ -114,4 +114,6 @@ dependencies {
     api 'org.greenrobot:eventbus:3.2.0'
     // 更多样式的Toast
     api 'com.muddzdev:styleabletoast:2.3.0'
+    // XPopup 更多的弹窗样式
+    api 'com.github.li-xiaojun:XPopup:2.3.8'
 }
