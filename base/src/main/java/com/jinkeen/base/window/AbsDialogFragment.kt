@@ -10,10 +10,14 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.LayoutRes
 import androidx.annotation.StyleRes
+import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
 import androidx.databinding.ViewDataBinding
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 
 abstract class AbsDialogFragment(@LayoutRes layoutId: Int) : DialogFragment(layoutId) {
 
@@ -22,6 +26,14 @@ abstract class AbsDialogFragment(@LayoutRes layoutId: Int) : DialogFragment(layo
     override fun onAttach(context: Context) {
         super.onAttach(context)
         mContext = context
+        requireActivity().lifecycle.addObserver(object : LifecycleEventObserver {
+            override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                if (event.targetState == Lifecycle.State.RESUMED) {
+                    onActivityResume()
+                    requireActivity().lifecycle.removeObserver(this)
+                }
+            }
+        })
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,6 +46,13 @@ abstract class AbsDialogFragment(@LayoutRes layoutId: Int) : DialogFragment(layo
 
     @StyleRes
     protected abstract fun getStyle(): Int
+
+    /**
+     * 在宿主[AppCompatActivity]的[onResume]生命周期执行后执行
+     *
+     * 该方法可替换原[onActivityCreated]的使用。
+     */
+    protected open fun onActivityResume() {}
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState)

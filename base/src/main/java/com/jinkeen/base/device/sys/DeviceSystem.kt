@@ -1,9 +1,11 @@
 package com.jinkeen.base.device.sys
 
+import com.centerm.smartpos.aidl.sys.AidlDeviceManager
 import com.jinkeen.base.device.data.CardType
 import com.jinkeen.base.device.data.DeviceType
 import com.jinkeen.base.device.Device
 import com.jinkeen.base.device.SingleInstance
+import com.nld.cloudpos.aidl.AidlDeviceService
 
 /**
  * 对设备操作的接口。
@@ -68,4 +70,18 @@ interface DeviceSystem {
      * @return 返回卡座的不同状态码。[DeckState.STATE_HAVE_CARD_NO_POWER]、[DeckState.STATE_HAVE_CARD_HAVE_POWER]、[DeckState.STATE_NOT_CARD]、[DeckState.STATE_UNKNOWN]其中之一
      */
     fun checkCardDeckState(): Int
+
+    /**
+     * 获取升腾C960F设备的专属驱动管理对象
+     *
+     * @return 返回专用于升腾C960F设备的驱动管理对象
+     */
+    fun getCentermAidlDeviceManager(): AidlDeviceManager
+
+    /**
+     * 获取新大陆设备的专属驱动管理对象
+     *
+     * @return 返回专用于新大陆设备的驱动管理对象
+     */
+    fun getNewlandAidlDeviceService(): AidlDeviceService
 }

@@ -69,19 +69,20 @@ class CardReader private constructor() {
      * @return 返回具体的底层驱动对象，若没有找到与当前设备匹配的驱动实现，则返回`null`
      */
     fun getDeviceSystem(context: Context): DeviceSystem? {
+        var deviceSystem: DeviceSystem? = null
+
         val deviceType = recognitionDevice()
-        fun invokeMethod(needParams: Boolean, method: Method, execObj: Any, context: Context): DeviceSystem? {
-            if (method.isAnnotationPresent(SingleInstance::class.java)) {
+        fun invokeMethod(needParams: Boolean, method: Method, execObj: Any, context: Context) {
+            method.getAnnotation(SingleInstance::class.java)?.let {
                 if (DeviceSystem::class.java.isAssignableFrom(method.returnType)) {
                     val o = if (needParams) method.invoke(execObj, context) else method.invoke(execObj)
-                    return o as DeviceSystem
+                    deviceSystem = (o as DeviceSystem)
                 }
             }
-            return null
         }
 
-        if (deviceClassess.isEmpty()) findClasses(BASE_CR_PACKAGE_NAME).forEach {
-            if (it.isAnnotationPresent(Device::class.java)) deviceClassess.add(it)
+        if (deviceClassess.isEmpty()) findClasses(BASE_CR_PACKAGE_NAME).forEach { cls ->
+            cls.getAnnotation(Device::class.java)?.let { deviceClassess.add(cls) }
         }
 
         deviceClassess.forEach { cls ->
@@ -92,20 +93,20 @@ class CardReader private constructor() {
                     try {
                         val companion = cls.getDeclaredField("Companion")
                         companion.type.declaredMethods.forEach { method ->
-                            return invokeMethod(device.needContext, method, companion.get(cls)!!, context)
+                            invokeMethod(device.needContext, method, companion.get(cls)!!, context)
                         }
                     } catch (e: Exception) {
                         cls.declaredMethods.forEach { method ->
-                            return invokeMethod(device.needContext, method, cls, context)
+                            invokeMethod(device.needContext, method, cls, context)
                         }
                     }
                 } else {
                     val o = if (device.needContext) cls.getDeclaredConstructor(Context::class.java).newInstance(context) else cls.newInstance()
-                    if (o is DeviceSystem) return o
+                    if (o is DeviceSystem) deviceSystem = o
                 }
             }
         }
-        return null
+        return deviceSystem
     }
 
     /**
@@ -116,15 +117,15 @@ class CardReader private constructor() {
      */
     fun getCardStream(cardType: CardType): CardStream? {
         fun invokeMethod(method: Method, execObj: Any): CardStream? {
-            if (method.isAnnotationPresent(SingleInstance::class.java)) {
+            method.getAnnotation(SingleInstance::class.java)?.let {
                 if (CardStream::class.java.isAssignableFrom(method.returnType))
                     return method.invoke(execObj) as CardStream
             }
             return null
         }
 
-        if (streamClassess.isEmpty()) findClasses(BASE_CR_PACKAGE_NAME).forEach {
-            if (it.isAnnotationPresent(StreamType::class.java)) streamClassess.add(it)
+        if (streamClassess.isEmpty()) findClasses(BASE_CR_PACKAGE_NAME).forEach { cls ->
+            cls.getAnnotation(StreamType::class.java)?.let { streamClassess.add(cls) }
         }
 
         streamClassess.forEach { cls ->

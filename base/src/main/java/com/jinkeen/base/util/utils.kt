@@ -24,13 +24,11 @@ import androidx.annotation.StringRes
 import com.jakewharton.rxbinding4.view.clicks
 import com.jinkeen.base.action.BaseApplication
 import com.muddzdev.styleabletoast.StyleableToast
-import java.io.File
-import java.io.IOException
+import dalvik.system.DexFile
+import dalvik.system.PathClassLoader
 import java.math.BigDecimal
 import java.math.MathContext
 import java.math.RoundingMode
-import java.net.JarURLConnection
-import java.net.URLDecoder
 import java.security.MessageDigest
 import java.text.DecimalFormat
 import java.util.concurrent.TimeUnit
@@ -173,7 +171,7 @@ fun e(e: Throwable, vararg text: Any, tag: String = DEF_LOG_TAG) {
  * @param text 任意日志数据
  */
 fun loganW(vararg text: Any, tag: String = DEF_LOG_TAG) {
-    d(*text, tag= tag)
+    d(*text, tag = tag)
 }
 
 /**
@@ -433,65 +431,87 @@ fun CharSequence?.checkValidateCode(): Boolean = Pattern.matches("\\d{6}", this 
  * @return 正常会返回包下所有的类，除非出现意外则返回空的集合
  */
 fun findClasses(packageName: String): Set<Class<*>> = linkedSetOf<Class<*>>().apply {
-    val recursive = true
-    val packDirName = packageName.replace('.', '/')
-    try {
-        Thread.currentThread().contextClassLoader?.getResources(packDirName)?.let { dirs ->
-            while (dirs.hasMoreElements()) {
-                val url = dirs.nextElement()
-                when (url.protocol) {
-                    "file" -> {
-                        val filePath = URLDecoder.decode(url.file, Charsets.UTF_8.name())
-                        addClass(this, filePath, packageName)
-                    }
-                    "jar" -> {
-                        val jar = (url.openConnection() as JarURLConnection).jarFile
-                        val entries = jar.entries()
-                        while (entries.hasMoreElements()) {
-                            val entry = entries.nextElement()
-                            var name = entry.name
-                            if (name.first() == '/') name = name.substring(1)
-                            if (name.startsWith(packDirName)) {
-                                val index = name.lastIndexOf('/')
-                                val nPackName = if (index != -1) name.substring(0, index).replace('/', '.') else packageName
-                                if (index != -1 || recursive) {
-                                    if (name.endsWith(".class") && !entry.isDirectory) {
-                                        val clsname = name.substring(nPackName.length + 1, name.length - 6)
-                                        this.add(Class.forName("${nPackName}.${clsname}"))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+    val enumeration = DexFile(BaseApplication.getInstance().packageCodePath).entries()
+    while (enumeration.hasMoreElements()) {
+        val clsname = enumeration.nextElement()
+        if (clsname.contains(packageName, true))
+            if (!clsname.contains('$')) Thread.currentThread().contextClassLoader?.let { loader ->
+                add(loader.loadClass(clsname))
             }
-        }
-    } catch (e: IOException) {
-        e.printStackTrace()
     }
 }
 
 /**
- * 递归的遍历指定‘包’路径下所有的类，并将其添加至`classes`集合中。
+ * 将[ByteArray]转换成十六进制字符串
  *
- * @param classes 所有被查找到的类都将被添加至该集合内
- * @param filePath '包'所在的绝对文件路径
- * @param packageName 基础包名
+ * @param offset 指定要转换的最长偏移量
+ * @return 返回转换后的字符串
  */
-fun addClass(classes: LinkedHashSet<Class<*>>, filePath: String, packageName: String) {
-    File(filePath).apply {
-        if (!exists() || !isDirectory) return@apply
-        listFiles()?.forEach {
-            if (it.isDirectory) addClass(classes, it.absolutePath, "${packageName}.${it.name}")
-            else {
-                val fname = it.name
-                if (fname.endsWith(".class")) {
-                    Thread.currentThread().contextClassLoader?.let { loader ->
-                        val clsname = fname.substring(0, fname.lastIndexOf("."))
-                        classes.add(loader.loadClass("${packageName}.${clsname}"))
-                    }
-                }
-            }
+@JvmOverloads
+fun ByteArray.toHexStr(offset: Int = Int.MAX_VALUE): String = buildString {
+    forEachIndexed { index: Int, byte: Byte ->
+        if (index < offset) {
+            val s = Integer.toHexString(0xFF and byte.toInt())
+            if (s.length < 2) append(0)
+            append(s.uppercase())
         }
     }
+}
+
+/**
+ * 解析为参数指定的基数中的有符号整数
+ *
+ * @param radix 解析时使用的基数，默认为16
+ * @return 解析后的整数
+ */
+fun Int.toHex(radix: Int = 16): Int {
+    return "$this".toHexInt(radix)
+}
+
+/**
+ * 解析为参数指定的基数中的有符号整数
+ *
+ * @param radix 解析时使用的基数，默认为16
+ * @return 解析后的整数
+ */
+fun String.toHexInt(radix: Int = 16): Int {
+    return Integer.parseInt(this, radix)
+}
+
+/**
+ * 将字符串转换为一个十六进制的字节数组
+ *
+ *   00A4 0400 09 A00000000386980701 00
+ *
+ * @return 返回一个十六进制的字节数组
+ */
+fun String.toHexBytes(): ByteArray {
+    val length = this.length / 2
+    val result = ByteArray(length)
+    val cArray = this.uppercase().toCharArray()
+    for (n in 0 until length) {
+        val pos = n * 2
+        result[n] = (cArray[pos].to2Int() shl 4 or cArray[pos + 1].to2Int()).toByte()
+    }
+    return result
+}
+
+fun Char.to2Int(): Int = when (this) {
+    '0' -> 0
+    '1' -> 1
+    '2' -> 2
+    '3' -> 3
+    '4' -> 4
+    '5' -> 5
+    '6' -> 6
+    '7' -> 7
+    '8' -> 8
+    '9' -> 9
+    'a', 'A' -> 10
+    'b', 'B' -> 11
+    'c', 'C' -> 12
+    'd', 'D' -> 13
+    'e', 'E' -> 14
+    'f', 'F' -> 15
+    else -> -1
 }

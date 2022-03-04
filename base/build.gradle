@@ -39,10 +39,31 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
+    sourceSets {
+        main {
+            assets.srcDirs = ['assets']
+            jniLibs.srcDirs = ['newland-n910-libs']
+            aidl.srcDirs = ['src/main/aidl']
+        }
+    }
     //生成文档注释
     task generateSourcesJar(type: Jar) {
         from android.sourceSets.main.java.srcDirs
         classifier 'sources'
+    }
+    // 生成so库
+    task generateSoJar(type: Jar) {
+        group = 'jar'
+        archiveClassifier.set('so')
+        from('../newland-n910-libs/')
+    }
+    task generateMergeJar(type: Jar, dependsOn: ['assembleRelease', 'generateSoJar']) {
+        group = 'jar'
+        from(project.zipTree('build/libs/emvjni-so.jar'))
+        from(project.zipTree('build/libs/intelligentLib-so.jar'))
+        from(project.zipTree('build/libs/ndkapi-so.jar'))
+        from(project.zipTree('build/libs/ndkapism-so.jar'))
+        from(project.zipTree('build/intermediates/aar_main_jar/release/classes.jar'))
     }
 }
 
@@ -51,7 +72,7 @@ publishing {
         release(MavenPublication) {
             groupId = "com.jinkeen.base"
             artifactId = "frame"
-            version = "1.0.2"
+            version = "1.0.6"
             afterEvaluate { artifact(tasks.getByName("bundleReleaseAar")) }
             artifact generateSourcesJar
             pom.withXml {
@@ -96,6 +117,11 @@ dependencies {
 
     api 'com.google.code.gson:gson:2.8.9'
     api 'com.jakewharton.rxbinding4:rxbinding:4.0.0'
+
+    // 升腾C960F
+    api fileTree(include: ['*.jar'], dir: 'centerm-960f-libs')
+    // 新大陆N910
+    api fileTree(include: ['*.jar'], dir: 'newland-n910-libs')
 
     // Coil
     api 'io.coil-kt:coil:1.2.0'
