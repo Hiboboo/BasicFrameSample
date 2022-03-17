@@ -14,6 +14,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.NetworkInfo
 import android.os.Build
+import android.os.StatFs
 import android.provider.Settings
 import android.util.Log
 import android.util.TypedValue
@@ -23,14 +24,18 @@ import android.view.inputmethod.InputMethodManager
 import androidx.annotation.StringRes
 import com.jakewharton.rxbinding4.view.clicks
 import com.jinkeen.base.action.BaseApplication
+import com.jinkeen.base.log.JKLog
+import com.jinkeen.base.log.app.L_TYPE_EXCEPT
+import com.jinkeen.base.log.app.L_TYPE_ROUTINE
 import com.muddzdev.styleabletoast.StyleableToast
 import dalvik.system.DexFile
-import dalvik.system.PathClassLoader
 import java.math.BigDecimal
 import java.math.MathContext
 import java.math.RoundingMode
 import java.security.MessageDigest
 import java.text.DecimalFormat
+import java.text.SimpleDateFormat
+import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
 
@@ -172,6 +177,7 @@ fun e(e: Throwable, vararg text: Any, tag: String = DEF_LOG_TAG) {
  */
 fun loganW(vararg text: Any, tag: String = DEF_LOG_TAG) {
     d(*text, tag = tag)
+    JKLog.w(L_TYPE_ROUTINE, buildString { text.forEach { append(it) } })
 }
 
 /**
@@ -184,6 +190,7 @@ fun loganW(vararg text: Any, tag: String = DEF_LOG_TAG) {
  */
 fun loganE(e: Throwable, vararg text: Any, tag: String = DEF_LOG_TAG) {
     e(e, *text, tag = tag)
+    JKLog.e(L_TYPE_EXCEPT, buildString { text.forEach { append(it) } }, e)
 }
 
 /**
@@ -514,4 +521,37 @@ fun Char.to2Int(): Int = when (this) {
     'e', 'E' -> 14
     'f', 'F' -> 15
     else -> -1
+}
+
+private val sDateFormat = SimpleDateFormat("yyyyMMdd", Locale.CHINA)
+
+/**
+ * 获取当前日期（`yyyy-MM-dd`）的13位时间戳表示形式
+ *
+ * @return 返回系统当前的日期时间戳，若出现异常返回`0`
+ */
+fun getCurrentDateTimemillis(): Long = sDateFormat.parse(sDateFormat.format(Date()))?.time ?: 0L
+
+/**
+ * 将原始的13位时间戳转义成只有年月日的时间戳，其结果只表示0点0分0秒的时间戳
+ *
+ * @param oTime 原始13位完整时间戳
+ * @return 返回转义后的时间戳。
+ */
+fun escapeTimemillis(oTime: Long): Long = sDateFormat.parse(sDateFormat.format(oTime))?.time ?: oTime
+
+/**
+ * 检查`SDCard`中目标文件的现有总容量是否还允许被写入目标容量的数据
+ *
+ * @param path 要被检查的目标文件路径
+ * @param capacity 要被写入的目标数据的容量
+ * @return `true`表示允许，否则返回`false`
+ */
+fun isCanWriteSDCard(path: String, capacity: Long): Boolean = try {
+    val stat = StatFs(path)
+    val total = stat.blockSizeLong * stat.availableBlocksLong
+    total > capacity
+} catch (e: IllegalArgumentException) {
+    e(e, "检查SD卡可写入容量出现异常")
+    false
 }

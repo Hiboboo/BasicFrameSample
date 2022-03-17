@@ -1,10 +1,10 @@
 package com.jinkeen.base.device.sys
 
 import com.centerm.smartpos.aidl.sys.AidlDeviceManager
-import com.jinkeen.base.device.data.CardType
-import com.jinkeen.base.device.data.DeviceType
 import com.jinkeen.base.device.Device
 import com.jinkeen.base.device.SingleInstance
+import com.jinkeen.base.device.data.CardType
+import com.jinkeen.base.device.data.DeviceType
 import com.nld.cloudpos.aidl.AidlDeviceService
 
 /**
@@ -76,12 +76,12 @@ interface DeviceSystem {
      *
      * @return 返回专用于升腾C960F设备的驱动管理对象
      */
-    fun getCentermAidlDeviceManager(): AidlDeviceManager
+    fun getCentermAidlDeviceManager(): AidlDeviceManager?
 
     /**
      * 获取新大陆设备的专属驱动管理对象
      *
      * @return 返回专用于新大陆设备的驱动管理对象
      */
-    fun getNewlandAidlDeviceService(): AidlDeviceService
+    fun getNewlandAidlDeviceService(): AidlDeviceService?
 }

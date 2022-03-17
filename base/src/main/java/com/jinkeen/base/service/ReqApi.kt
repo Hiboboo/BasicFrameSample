@@ -1,6 +1,7 @@
 package com.jinkeen.base.service
 
 import rxhttp.wrapper.annotation.DefaultDomain
+import rxhttp.wrapper.annotation.Domain
 
 /** 测试环境 */
 //@DefaultDomain
@@ -10,6 +11,16 @@ import rxhttp.wrapper.annotation.DefaultDomain
 @DefaultDomain
 @JvmField
 var BASE_URL = "https://jinkeen.com/publicServer/"
+
+/** 日志上传基础域名 */
+@Domain(name = "LogUpBaseUrl")
+const val LOG_UP_BASE_URL = "http://logan.jinkeen.com/"
+
+/** 日志详情上传 */
+const val LOG_UP_DETAIL = "logan/logan/detail.json"
+
+/** 日志上传结束时通知服务器 */
+const val LOG_UP_END = "pos/updatePosLoganByDeviceSn"
 
 /** 设备初始化 */
 const val API_INIT_DEVICE = "pos/posinit.do"
