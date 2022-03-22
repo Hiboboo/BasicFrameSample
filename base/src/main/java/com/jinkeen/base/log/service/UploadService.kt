@@ -5,6 +5,7 @@ import android.os.Build
 import com.jinkeen.base.log.app.KEY_LIFEPLUS_POSNUM
 import com.jinkeen.base.service.LOG_UP_DETAIL
 import com.jinkeen.base.service.LOG_UP_END
+import com.jinkeen.base.service.LOG_UP_FILE
 import com.jinkeen.base.util.SharedPreferenceHelper
 import com.jinkeen.base.util.getCurrentVerCode
 import com.jinkeen.base.util.getCurrentVerName
@@ -12,6 +13,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import rxhttp.RxHttp
 import rxhttp.toOkResponse
+import rxhttp.wrapper.entity.UpFile
 import java.io.File
 
 @SuppressLint("HardwareIds")
@@ -74,5 +76,24 @@ internal class UploadService {
      *
      * @param files 多个记录在本地的原加密日志文件
      */
-    suspend fun uploadFastLogFiles(files: List<File>) {}
+    suspend fun uploadFastLogFiles(files: List<File>) {
+        // 服务器不支持一次性传多个文件，因此需要循环内一个个的传
+        files.forEach { file ->
+            RxHttp.postForm(LOG_UP_FILE)
+                .setDomainToLogUpBaseUrlIfAbsent()
+                .addHeader("appId", SharedPreferenceHelper.getString(KEY_LIFEPLUS_POSNUM))
+                .addHeader("unionId", serial)
+                .addHeader("fileDate", file.name)
+                .addHeader("deviceId", Build.MODEL)
+                .addHeader("buildVersion", getCurrentVerCode().toString())
+                .addHeader("appVersion", getCurrentVerName())
+                .addHeader("platform", "1")
+                .addFile("file", file)
+                .connectTimeout(TIMEOUT)
+                .readTimeout(TIMEOUT)
+                .writeTimeout(TIMEOUT)
+                .toOkResponse()
+                .await()
+        }
+    }
 }

@@ -9,8 +9,13 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 日志记录与上传的操作类。
@@ -30,7 +35,8 @@ public final class JKLog {
      * @param config 日志基本配置信息
      */
     public static void init(LogConfig config) {
-        if (null == sLogControlCenter) sLogControlCenter = LogControlCenterService.Instance.INSTANCE.get(config);
+        if (null == sLogControlCenter)
+            sLogControlCenter = LogControlCenterService.Instance.INSTANCE.get(config);
     }
 
     /**
@@ -106,7 +112,7 @@ public final class JKLog {
     public static long fastUp(int recentDays) {
         if (null == sLogControlCenter) throw new NullPointerException("请先初始化JKLog");
         final long currentTime = System.currentTimeMillis();
-        return sLogControlCenter.up(new int[]{}, currentTime - recentDays * LogConfig.DAY, currentTime);
+        return sLogControlCenter.up(new int[]{}, false, currentTime - recentDays * LogConfig.DAY, currentTime);
     }
 
     /**
@@ -124,24 +130,79 @@ public final class JKLog {
             if (null == beginTime || null == endTime) return -1;
             final long b = Objects.requireNonNull(mSimpleFormat.parse(beginTime)).getTime();
             final long e = Objects.requireNonNull(mSimpleFormat.parse(endTime)).getTime();
-            return sLogControlCenter.up(types, b, e);
+            return sLogControlCenter.up(types, false, b, e);
         } catch (ParseException | NullPointerException e) {
             e.printStackTrace();
             throw new IllegalArgumentException(e);
         }
     }
 
+    private static final AtomicLong regularTaskId = new AtomicLong(-1);
+    private static Timer timer;
+
     /**
-     * 周期性（重复）的上传日志到服务端，除<code>{@link Cycle#FIXED_TIME}</code>外，其他周期性均以该方法第一次被执行时为时间基准。
+     * 周期性（重复）的上传日志到服务端，除<code>{@link Cycle#FIXED_TIME}</code>外，其他周期性均以00:00:00为事件基准。
      * <br/>
      * 周期性任务不接受多次执行，若多次调用，将始终按第一次为准。
      *
      * @param cycle  周期性的类型，取<code>{@link Cycle}</code>中定义的常量之一。
      * @param cValue 指定周期的具体数值，当<code>cycle=FIXED_TIME</code>时，时间默认采用24小时制。
      */
-    public static long regularUp(Cycle cycle, int cValue) {
+    public static void regularUp(Cycle cycle, int cValue) {
         if (null == sLogControlCenter) throw new NullPointerException("请先初始化JKLog");
-        return 0L;
+        if (regularTaskId.get() > -1) return;
+        // cycle=DAY时，每天早上10点
+        int upHour = 10;
+        if (cycle == Cycle.FIXED_TIME) upHour = cValue;
+        // 当周期性为按小时，并且周期的值为24时，实际上可以理解为每天一次
+        if (cycle == Cycle.HOUR && cValue >= 24) {
+            cycle = Cycle.FIXED_TIME;
+            upHour = 0;
+        }
+        final Cycle nCycle = cycle;
+        final int hour = upHour;
+        if (null == timer) timer = new Timer();
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                execRegularTask(nCycle, nCycle == Cycle.DAY ? cValue : 1, nCycle == Cycle.HOUR ? cValue : hour);
+            }
+        }, 0, 60 * 1000L);
+    }
+
+    private static final AtomicInteger sTime = new AtomicInteger(0);
+    private static final AtomicInteger loopTime = new AtomicInteger(1);
+
+    private static void execRegularTask(Cycle cycle, int day, int hour) {
+        if (sTime.getAndIncrement() % 60 == 0) {
+            sTime.set(0);
+            final Calendar calendar = Calendar.getInstance(Locale.CHINA);
+            if (cycle == Cycle.DAY || cycle == Cycle.FIXED_TIME) {
+                final int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
+                if (currentHour == hour) {
+                    // 如果是按指定天数进行循环上传，那么要上传的天数值就等于参数传进来的，否则，按固定几点上传的话，就默认为每天，因此上传的天数值固定等于1
+                    calendar.add(Calendar.DAY_OF_MONTH, -day);
+                    calendar.set(Calendar.HOUR_OF_DAY, hour);
+                    calendar.set(Calendar.MINUTE, 0);
+                    calendar.set(Calendar.SECOND, 0);
+                    calendar.set(Calendar.MILLISECOND, 0);
+                    final long b = calendar.getTimeInMillis();
+                    final long taskId = sLogControlCenter.up(new int[]{}, true, b, b + ((day - 1) * LogConfig.DAY));
+                    regularTaskId.set(taskId);
+                }
+            } else {
+                if (loopTime.getAndIncrement() % hour == 0) {
+                    loopTime.set(1);
+                    calendar.add(Calendar.HOUR_OF_DAY, -hour);
+                    calendar.set(Calendar.MINUTE, 0);
+                    calendar.set(Calendar.SECOND, 0);
+                    calendar.set(Calendar.MILLISECOND, 0);
+                    final long b = calendar.getTimeInMillis();
+                    final long taskId = sLogControlCenter.up(new int[]{}, false, b, System.currentTimeMillis());
+                    regularTaskId.set(taskId);
+                }
+            }
+        }
     }
 
     /** 周期性的常量标识 */
@@ -153,9 +214,6 @@ public final class JKLog {
         /** 按小时 */
         HOUR,
 
-        /** 按秒 */
-        SECOND,
-
         /** 固定时间。即指定每天固定的时间为周期 */
         FIXED_TIME
     }
@@ -165,10 +223,32 @@ public final class JKLog {
      *
      * @param taskId 由上传任务开始时生成的唯一任务ID
      */
-    public static void stopUp(long taskId) {}
+    public static void stopUp(long taskId) {
+        if (null == sLogControlCenter) throw new NullPointerException("请先初始化JKLog");
+        sLogControlCenter.stop(taskId);
+    }
+
+    /**
+     * 停止正在执行中的周期性任务
+     */
+    public static void stopRegularTask() {
+        if (null == sLogControlCenter) throw new NullPointerException("请先初始化JKLog");
+        if (regularTaskId.get() == -1) return;
+        stop(regularTaskId.get());
+    }
 
     /**
      * 立即停止所有正在进行中的上传任务，包括即时性的和周期性的。
      */
-    public static void stopAllUp() {}
+    public static void stopAllUp() {
+        if (null == sLogControlCenter) throw new NullPointerException("请先初始化JKLog");
+        stop(-999);
+    }
+
+    private static void stop(long taskId) {
+        if (timer != null) timer.cancel();
+        timer = null;
+        regularTaskId.set(-1);
+        sLogControlCenter.stop(taskId);
+    }
 }

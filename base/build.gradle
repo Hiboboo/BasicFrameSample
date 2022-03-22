@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    compileSdk 32
+    compileSdk 31
 
     defaultConfig {
         minSdk 21
-        targetSdk 32
+        targetSdk 31
         multiDexEnabled true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -68,7 +68,7 @@ publishing {
         release(MavenPublication) {
             groupId = "com.jinkeen.base"
             artifactId = "frame"
-            version = "1.0.9"
+            version = "1.0.10"
             afterEvaluate { artifact(tasks.getByName("bundleReleaseAar")) }
             artifact generateSourcesJar
             pom.withXml {

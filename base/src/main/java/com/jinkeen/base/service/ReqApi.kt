@@ -14,10 +14,13 @@ var BASE_URL = "https://jinkeen.com/publicServer/"
 
 /** 日志上传基础域名 */
 @Domain(name = "LogUpBaseUrl")
-const val LOG_UP_BASE_URL = "http://logan.jinkeen.com/"
+const val LOG_UP_BASE_URL = "http://logan.jinkeen.com/logan/"
 
 /** 日志详情上传 */
-const val LOG_UP_DETAIL = "logan/logan/detail.json"
+const val LOG_UP_DETAIL = "logan/detail.json"
+
+/** 日志文件上传 */
+const val LOG_UP_FILE = "logan/upload.json"
 
 /** 日志上传结束时通知服务器 */
 const val LOG_UP_END = "pos/updatePosLoganByDeviceSn"

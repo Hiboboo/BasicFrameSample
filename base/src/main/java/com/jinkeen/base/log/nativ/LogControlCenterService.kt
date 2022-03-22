@@ -6,13 +6,14 @@ import android.util.ArrayMap
 import android.util.Log
 import com.jinkeen.base.log.listener.OnLogProtocolStatusListener
 import com.jinkeen.base.log.parser.LogParserProtocol
+import com.jinkeen.base.log.service.UploadService
 import com.jinkeen.base.util.SingletonFactory
 import com.jinkeen.base.util.escapeTimemillis
-import com.jinkeen.base.log.service.UploadService
 import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import java.io.File
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
@@ -23,7 +24,7 @@ import kotlin.concurrent.thread
  * --
  * 负责具体的日志写入，本地日志文件控制操作
  */
-class LogControlCenterService private constructor(val config: LogConfig) {
+internal class LogControlCenterService private constructor(val config: LogConfig) {
 
     companion object {
 
@@ -135,10 +136,20 @@ class LogControlCenterService private constructor(val config: LogConfig) {
      * 立即上传指定的日志信息到服务端，将按照具体的时间范围进行精细化的筛选。
      *
      * @param types 指定要上传的日志类型。当筛选时间间隔超过24小时，将忽略该参数的作用
+     * @param isForceFile 是否要求强制上传文件
      * @param beginTime 开始的时间戳，若超过本地已记录的最早日志时间，将自动按本地记录的最早时间来算。
      * @param endTime 结束的时间戳，若超过本地记录的最晚日志时间，将自动按照本地记录的最晚日志时间来算。
      */
-    fun up(types: IntArray, beginTime: Long, endTime: Long): Long {
+    fun up(types: IntArray, isForceFile: Boolean, beginTime: Long, endTime: Long): Long {
+
+        suspend fun forceUploadFiles(files: List<File>) {
+            try {
+                UploadService().uploadFastLogFiles(files)
+            } catch (e: Exception) {
+                Log.e(TAG, "上传日志文件异常", e)
+            }
+        }
+
         val rKeys = hashSetOf<Long>()
         sTaskArray.entries.forEach { if (!it.value.isActive || it.value.isCompleted) rKeys.add(it.key) }
         sTaskArray.removeAll(rKeys)
@@ -151,13 +162,17 @@ class LogControlCenterService private constructor(val config: LogConfig) {
              *
              * 当开始到结束时间的间隔在24小时以内，首选选择字符串上传，否则首选选择文件上传。
              */
-            val logs = worker.filterFiles(escapeTimemillis(beginTime), escapeTimemillis(endTime))
+            val logFiles = worker.filterFiles(escapeTimemillis(beginTime), escapeTimemillis(endTime))
+            if (isForceFile) {
+                forceUploadFiles(logFiles)
+                return@launch
+            }
             if (endTime - beginTime < LogConfig.DAY) {
                 // 24小时以内，最多只有两个本地日志文件
                 // {"c":"Log content-21660","f":101,"l":1640336274432,"n":"log","i":188,"m":false}
                 val upLog = try {
                     JSONArray().apply {
-                        buildString { logs.forEach { if (isActive) append(LogParserProtocol(it).process()) } }.split("\n").forEach {
+                        buildString { logFiles.forEach { if (isActive) append(LogParserProtocol(it).process()) } }.split("\n").forEach {
                             val logJsonObj = try {
                                 JSONObject(it)
                             } catch (e: JSONException) {
@@ -183,11 +198,7 @@ class LogControlCenterService private constructor(val config: LogConfig) {
                         Log.e(TAG, "上传日志接口异常", e)
                     }
                 }
-            } else try {
-                UploadService().uploadFastLogFiles(logs)
-            } catch (e: Exception) {
-                Log.e(TAG, "上传日志文件异常", e)
-            }
+            } else forceUploadFiles(logFiles)
         }
         return id
     }
@@ -199,10 +210,17 @@ class LogControlCenterService private constructor(val config: LogConfig) {
      * @see up
      */
     fun stop(taskId: Long) {
-        if (!sTaskArray.containsKey(taskId)) return
-        if (sTaskArray[taskId]?.isActive == true) {
-            sTaskArray[taskId]?.cancel("被强行停止。")
-            sTaskArray.remove(taskId)
+        if (taskId >= 0) {
+            if (!sTaskArray.containsKey(taskId)) return
+            if (sTaskArray[taskId]?.isActive == true) {
+                sTaskArray[taskId]?.cancel("被强行停止。")
+                sTaskArray.remove(taskId)
+            }
+        } else {
+            sTaskArray.entries.forEach {
+                if (it.value.isActive) it.value.cancel("自动强行停止")
+            }
+            sTaskArray.clear()
         }
     }
 }
