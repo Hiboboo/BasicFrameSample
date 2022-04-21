@@ -16,8 +16,6 @@ import coil.size.Precision
 import pl.droidsonroids.gif.GifDrawable
 import java.lang.reflect.InvocationTargetException
 
-const val TAG = "ViewBindingAdapter"
-
 /**
  * 为[ImageView]设置网络图片
  *
@@ -29,7 +27,6 @@ const val TAG = "ViewBindingAdapter"
  */
 @BindingAdapter(value = ["imageUrl", "placeholder", "error", "targetWidth", "targetHeight"], requireAll = false)
 fun ImageView.setNetImage(url: String, placeholder: Drawable?, error: Drawable?, width: Int = 0, height: Int = 0) {
-    d(TAG, "setNetImage(url=${url}|placeholder=${placeholder}|error=${error}|width=${width}|height=${height})")
     this.load(url) {
         crossfade(true)
         placeholder(placeholder)
@@ -52,7 +49,6 @@ fun ImageView.setNetImage(url: String, placeholder: Drawable?, error: Drawable?,
  */
 @BindingAdapter(value = ["resource", "targetWidth", "targetHeight"], requireAll = false)
 fun ImageView.setLocalImage(@DrawableRes resource: Int, width: Int = 0, height: Int = 0) {
-    d(TAG, "setLocalImage(resource=${resource}|width=${width}|height=${height})")
     this.load(resource) {
         crossfade(true)
         if (width > 0 && height > 0) {
@@ -69,7 +65,6 @@ fun ImageView.setLocalImage(@DrawableRes resource: Int, width: Int = 0, height: 
  */
 @BindingAdapter("gifResource")
 fun ImageView.loadGif(@DrawableRes resource: Int) {
-    d(TAG, "loadGif(resource=${resource})")
     try {
         this.setImageDrawable(GifDrawable(resources, resource))
     } catch (e: InvocationTargetException) {
@@ -85,7 +80,6 @@ fun ImageView.loadGif(@DrawableRes resource: Int) {
  */
 @BindingAdapter(value = ["onCheckedChangeListener"])
 fun CompoundButton.setCheckedChangeListener(listener: CompoundButton.OnCheckedChangeListener) {
-    d(TAG, "setCheckedChangeListener(listener=${listener})")
     this.setOnCheckedChangeListener(listener)
 }
 
@@ -97,7 +91,6 @@ fun CompoundButton.setCheckedChangeListener(listener: CompoundButton.OnCheckedCh
  */
 @BindingAdapter(value = ["direction", "drawable"], requireAll = true)
 fun TextView.setLocalDrawable(direction: String, drawableRes: Int) {
-    d(TAG, "setLocalDrawable(direction=${direction}|drawableRes=${drawableRes})")
     setTextViewDrawable(this, direction, ContextCompat.getDrawable(context, drawableRes)!!)
 }
 
@@ -113,7 +106,6 @@ fun TextView.setLocalDrawable(direction: String, drawableRes: Int) {
  */
 @BindingAdapter(value = ["imageUrl", "placeholder", "error", "targetWidth", "targetHeight", "direction"], requireAll = false)
 fun TextView.setNetDrawable(url: String, placeholder: Drawable? = null, error: Drawable? = null, width: Int = 0, height: Int = 0, direction: String) {
-    d(TAG, "setNetDrawable(url=${url}|placeholder=${placeholder}|error=${error}|width=${width}|height=${height}|direction=${direction})")
     val builder = ImageRequest.Builder(context)
     builder.data(url)
         .crossfade(true)
@@ -148,7 +140,6 @@ private fun setTextViewDrawable(textView: TextView, direction: String, resource:
  */
 @BindingAdapter(value = ["visibility", "showAnim", "hideAnim"], requireAll = false)
 fun View.setVisibility(visibility: Int, showAnim: Animation? = null, hideAnim: Animation? = null) {
-    d(TAG, "setVisibility(visibility=${visibility}|showAnim=${showAnim}|hideAnim=${hideAnim})")
     if (visibility == View.VISIBLE && showAnim != null)
         this.animation = showAnim
     if ((visibility == View.GONE || visibility == View.INVISIBLE) && hideAnim != null)

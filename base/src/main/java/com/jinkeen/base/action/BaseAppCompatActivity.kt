@@ -72,7 +72,7 @@ abstract class BaseAppCompatActivity : AppCompatActivity() {
      */
     protected open fun onCreate(savedInstanceState: Bundle?, @LayoutRes layoutRes: Int) {
         super.onCreate(savedInstanceState)
-        setCustomDensity(this, application, if (isLandscape()) 1920.0f else 1080.0f)
+        setCustomDensity(this, application, getScreenWidth())
         rootviewBinding = ActivityBasicLayoutBinding.inflate(layoutInflater)
         this.setContentView(rootviewBinding.root)
         ActivityManager.add(this)

@@ -5,11 +5,11 @@ package com.jinkeen.base.device.data
  */
 enum class DeviceType constructor(val type: String) {
 
-    /** 联迪A8 */
+    /** 联迪A8 & 280P */
     POS_LIANDI_A8("APOSA8"),
 
-    /** 联迪W280PV3 */
-    POS_LIANDI_W280("W280PV3"),
+    /** 联迪A8 */
+    POS_LIANDI_A9("APOSA9"),
 
     /** 升腾C960F */
     POS_CENTERM_C960F("C960F"),

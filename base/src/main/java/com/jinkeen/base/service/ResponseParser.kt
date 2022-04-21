@@ -21,7 +21,7 @@ open class ResponseParser<T> : TypeParser<T> {
     override fun onParse(response: Response): T {
         val result: ReceptionResponse<T> = response.convertTo(ReceptionResponse::class, *types)
         d("Result=", result.toString(), tag = "ResponseParser")
-        return if (result.state == 0) result.data ?: "Not data." as T else throw NetworkParseException(
+        return if (result.state == 0 || result.state == 9000) result.data ?: "Not data." as T else throw NetworkParseException(
             result.state.toString(),
             result.msg ?: "Not message.",
             when (result.state) {

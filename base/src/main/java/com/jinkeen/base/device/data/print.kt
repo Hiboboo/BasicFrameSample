@@ -23,7 +23,10 @@ enum class PrintMode {
     QR_CODE,
 
     /** 切纸 */
-    CUT_PAPER
+    CUT_PAPER,
+
+    /** 文字大小 */
+    FONT_SIZE
 }
 
 /** 对其方式 */

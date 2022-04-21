@@ -68,7 +68,7 @@ publishing {
         release(MavenPublication) {
             groupId = "com.jinkeen.base"
             artifactId = "frame"
-            version = "1.0.10"
+            version = "1.0.16"
             afterEvaluate { artifact(tasks.getByName("bundleReleaseAar")) }
             artifact generateSourcesJar
             pom.withXml {

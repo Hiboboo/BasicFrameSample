@@ -48,13 +48,14 @@ interface JinkeenPrinter {
         }
 
         fun getInstance(): JinkeenPrinter? {
+            var printer: JinkeenPrinter? = null
+
             val deviceType = CardReader.recognitionDevice()
-            fun invokeMethod(method: Method, execObj: Any): JinkeenPrinter? {
+            fun invokeMethod(method: Method, execObj: Any) {
                 if (method.isAnnotationPresent(SingleInstance::class.java)) {
                     if (JinkeenPrinter::class.java.isAssignableFrom(method.returnType))
-                        return method.invoke(execObj) as JinkeenPrinter
+                        printer = method.invoke(execObj) as JinkeenPrinter
                 }
-                return null
             }
 
             if (deviceClassess.isEmpty()) findClasses(CardReader.BASE_CR_PACKAGE_NAME).forEach {
@@ -69,20 +70,20 @@ interface JinkeenPrinter {
                         try {
                             val companion = cls.getDeclaredField("Companion")
                             companion.type.declaredMethods.forEach { method ->
-                                return invokeMethod(method, companion.get(cls)!!)
+                                invokeMethod(method, companion.get(cls)!!)
                             }
                         } catch (e: Exception) {
                             cls.declaredMethods.forEach { method ->
-                                return invokeMethod(method, cls)
+                                invokeMethod(method, cls)
                             }
                         }
                     } else {
                         val o = cls.newInstance()
-                        if (o is JinkeenPrinter) return o
+                        if (o is JinkeenPrinter) printer = o
                     }
                 }
             }
-            return null
+            return printer
         }
     }
 
