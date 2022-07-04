@@ -32,6 +32,13 @@ android {
     buildFeatures {
         dataBinding = true
     }
+    sourceSets {
+        main {
+            assets.srcDirs = ['assets']
+            jniLibs.srcDirs = ['libs']
+            aidl.srcDirs = ['aidl']
+        }
+    }
 }
 
 dependencies {

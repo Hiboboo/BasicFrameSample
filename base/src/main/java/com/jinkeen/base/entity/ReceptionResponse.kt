@@ -7,8 +7,10 @@ internal data class ReceptionResponse<T>(
     var data: T?,
     @SerializedName("msg")
     var msg: String?,
-    @SerializedName("status")
-    var state: Int? = -1,
+    // status 默认的状态值字段
+    // code 保险销售接口独立字段
+    @SerializedName(value = "state", alternate = ["status", "code"])
+    var state: String = "-1",
     @SerializedName("strData")
     var extraData: String?
 )

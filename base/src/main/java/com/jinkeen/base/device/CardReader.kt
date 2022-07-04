@@ -41,8 +41,7 @@ class CardReader private constructor() {
             return when (model.replace(Regex("\\s"), "").uppercase()) {
                 "K2" -> DeviceType.VTM_K2
                 "UNIWINM339" -> DeviceType.VTM_339
-                "APOSA8", "W280PV3" -> DeviceType.POS_LIANDI_A8
-                "APOSA9" -> DeviceType.POS_LIANDI_A9
+                "APOSA8", "W280PV3", "APOSA9" -> DeviceType.POS_LIANDI_A8
                 "C960F" -> DeviceType.POS_CENTERM_C960F
                 "N910" -> DeviceType.POS_LAND_N910
                 else -> DeviceType.UNKNOW

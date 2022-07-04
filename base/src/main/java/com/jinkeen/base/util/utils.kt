@@ -27,8 +27,8 @@ import com.jinkeen.base.action.BaseApplication
 import com.jinkeen.base.log.JKLog
 import com.jinkeen.base.log.app.L_TYPE_EXCEPT
 import com.jinkeen.base.log.app.L_TYPE_ROUTINE
-import com.muddzdev.styleabletoast.StyleableToast
 import dalvik.system.DexFile
+import io.github.muddz.styleabletoast.StyleableToast
 import java.math.BigDecimal
 import java.math.MathContext
 import java.math.RoundingMode

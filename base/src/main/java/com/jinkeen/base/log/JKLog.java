@@ -1,5 +1,7 @@
 package com.jinkeen.base.log;
 
+import android.util.Log;
+
 import com.jinkeen.base.log.listener.OnLogProtocolStatusListener;
 import com.jinkeen.base.log.nativ.LogConfig;
 import com.jinkeen.base.log.nativ.LogControlCenterService;
@@ -140,6 +142,8 @@ public final class JKLog {
     private static final AtomicLong regularTaskId = new AtomicLong(-1);
     private static Timer timer;
 
+    private static final String TAG = "JKLog";
+
     /**
      * 周期性（重复）的上传日志到服务端，除<code>{@link Cycle#FIXED_TIME}</code>外，其他周期性均以00:00:00为事件基准。
      * <br/>
@@ -150,10 +154,12 @@ public final class JKLog {
      */
     public static void regularUp(Cycle cycle, int cValue) {
         if (null == sLogControlCenter) throw new NullPointerException("请先初始化JKLog");
+        Log.d(TAG, "cycle=" + cycle + ", cValue=" + cValue);
+        Log.d(TAG, "regularTaskId=" + regularTaskId.get());
         if (regularTaskId.get() > -1) return;
         // cycle=DAY时，每天早上10点
         int upHour = 10;
-        if (cycle == Cycle.FIXED_TIME) upHour = cValue;
+        if (cycle == Cycle.FIXED_TIME || cycle == Cycle.DAY) upHour = cValue;
         // 当周期性为按小时，并且周期的值为24时，实际上可以理解为每天一次
         if (cycle == Cycle.HOUR && cValue >= 24) {
             cycle = Cycle.FIXED_TIME;
@@ -161,46 +167,48 @@ public final class JKLog {
         }
         final Cycle nCycle = cycle;
         final int hour = upHour;
+        Log.d(TAG, "timer == null ? =" + (null == timer));
         if (null == timer) timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                execRegularTask(nCycle, nCycle == Cycle.DAY ? cValue : 1, nCycle == Cycle.HOUR ? cValue : hour);
+                Log.d(TAG, "-------------------------execRegularTask");
+                execRegularTask(nCycle, nCycle == Cycle.HOUR ? cValue : hour);
             }
-        }, 0, 60 * 1000L);
+        }, 0, 50 * 60 * 1000L);
     }
 
-    private static final AtomicInteger sTime = new AtomicInteger(0);
     private static final AtomicInteger loopTime = new AtomicInteger(1);
 
-    private static void execRegularTask(Cycle cycle, int day, int hour) {
-        if (sTime.getAndIncrement() % 60 == 0) {
-            sTime.set(0);
-            final Calendar calendar = Calendar.getInstance(Locale.CHINA);
-            if (cycle == Cycle.DAY || cycle == Cycle.FIXED_TIME) {
-                final int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
-                if (currentHour == hour) {
-                    // 如果是按指定天数进行循环上传，那么要上传的天数值就等于参数传进来的，否则，按固定几点上传的话，就默认为每天，因此上传的天数值固定等于1
-                    calendar.add(Calendar.DAY_OF_MONTH, -day);
-                    calendar.set(Calendar.HOUR_OF_DAY, hour);
-                    calendar.set(Calendar.MINUTE, 0);
-                    calendar.set(Calendar.SECOND, 0);
-                    calendar.set(Calendar.MILLISECOND, 0);
-                    final long b = calendar.getTimeInMillis();
-                    final long taskId = sLogControlCenter.up(new int[]{}, true, b, b + ((day - 1) * LogConfig.DAY));
-                    regularTaskId.set(taskId);
-                }
-            } else {
-                if (loopTime.getAndIncrement() % hour == 0) {
-                    loopTime.set(1);
-                    calendar.add(Calendar.HOUR_OF_DAY, -hour);
-                    calendar.set(Calendar.MINUTE, 0);
-                    calendar.set(Calendar.SECOND, 0);
-                    calendar.set(Calendar.MILLISECOND, 0);
-                    final long b = calendar.getTimeInMillis();
-                    final long taskId = sLogControlCenter.up(new int[]{}, false, b, System.currentTimeMillis());
-                    regularTaskId.set(taskId);
-                }
+    private static void execRegularTask(Cycle cycle, int hour) {
+        Log.d(TAG, "【task】 cycle=" + cycle + ", hour=" + hour);
+        final Calendar calendar = Calendar.getInstance(Locale.CHINA);
+        if (cycle == Cycle.DAY || cycle == Cycle.FIXED_TIME) {
+            final int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
+            Log.d(TAG, "currentHour=" + currentHour);
+            if (currentHour == hour) {
+                // 如果是按指定天数进行循环上传，那么要上传的天数值就等于参数传进来的，否则，按固定几点上传的话，就默认为每天，因此上传的天数值固定等于1
+                calendar.add(Calendar.DAY_OF_MONTH, -1);
+                calendar.set(Calendar.HOUR_OF_DAY, hour);
+                calendar.set(Calendar.MINUTE, 0);
+                calendar.set(Calendar.SECOND, 0);
+                calendar.set(Calendar.MILLISECOND, 0);
+                final long b = calendar.getTimeInMillis();
+                final long taskId = sLogControlCenter.up(new int[]{}, true, b, b + LogConfig.DAY);
+                Log.d(TAG, "taskId=" + taskId);
+                regularTaskId.set(taskId);
+            }
+        } else {
+            if (loopTime.getAndIncrement() % hour == 0) {
+                loopTime.set(1);
+                calendar.add(Calendar.HOUR_OF_DAY, -hour);
+                calendar.set(Calendar.MINUTE, 0);
+                calendar.set(Calendar.SECOND, 0);
+                calendar.set(Calendar.MILLISECOND, 0);
+                final long b = calendar.getTimeInMillis();
+                final long taskId = sLogControlCenter.up(new int[]{}, false, b, System.currentTimeMillis());
+                Log.d(TAG, "else task=" + taskId);
+                regularTaskId.set(taskId);
             }
         }
     }

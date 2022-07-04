@@ -15,6 +15,9 @@ import rxhttp.RxHttp
 import rxhttp.toOkResponse
 import rxhttp.wrapper.entity.UpFile
 import java.io.File
+import java.lang.Exception
+import java.text.SimpleDateFormat
+import java.util.*
 
 @SuppressLint("HardwareIds")
 internal class UploadService {
@@ -77,13 +80,20 @@ internal class UploadService {
      * @param files 多个记录在本地的原加密日志文件
      */
     suspend fun uploadFastLogFiles(files: List<File>) {
+        val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         // 服务器不支持一次性传多个文件，因此需要循环内一个个的传
         files.forEach { file ->
+            // 以下两种默认日期，是为了方便将来发现问题时，能够快速定位具体问题点
+            val fileDate = try {
+                format.format(file.name.toLongOrNull() ?: 1000000000000) // 文件名无法转换时的默认日期：2001-09-09
+            } catch (e: Exception) {
+                "2000-01-01" // 解析异常的默认日期
+            }
             RxHttp.postForm(LOG_UP_FILE)
                 .setDomainToLogUpBaseUrlIfAbsent()
                 .addHeader("appId", SharedPreferenceHelper.getString(KEY_LIFEPLUS_POSNUM))
                 .addHeader("unionId", serial)
-                .addHeader("fileDate", file.name)
+                .addHeader("fileDate", fileDate)
                 .addHeader("deviceId", Build.MODEL)
                 .addHeader("buildVersion", getCurrentVerCode().toString())
                 .addHeader("appVersion", getCurrentVerName())

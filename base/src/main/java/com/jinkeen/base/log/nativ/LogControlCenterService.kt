@@ -143,17 +143,23 @@ internal class LogControlCenterService private constructor(val config: LogConfig
     fun up(types: IntArray, isForceFile: Boolean, beginTime: Long, endTime: Long): Long {
 
         suspend fun forceUploadFiles(files: List<File>) {
+            Log.d(TAG, "---------上传所有的日志文件：$files")
             try {
                 UploadService().uploadFastLogFiles(files)
+                Log.d(TAG, "所有文件已上传：$files")
             } catch (e: Exception) {
                 Log.e(TAG, "上传日志文件异常", e)
             }
         }
 
-        val rKeys = hashSetOf<Long>()
-        sTaskArray.entries.forEach { if (!it.value.isActive || it.value.isCompleted) rKeys.add(it.key) }
-        sTaskArray.removeAll(rKeys)
+        if (sTaskArray.isNotEmpty()) {
+            val rKeys = hashSetOf<Long>()
+            sTaskArray.entries.forEach { if (!it.value.isActive || it.value.isCompleted) rKeys.add(it.key) }
+            Log.d(TAG, "已完成要删除的任务IDs=$rKeys")
+            sTaskArray.removeAll(rKeys)
+        }
         val id = sTaskIDs.getAndIncrement()
+        Log.d(TAG, "已创建出一个新的任务：$id")
         sTaskArray[id] = CoroutineScope(Dispatchers.IO).launch {
             /*
              * 日志上传应该有两种方法
@@ -163,6 +169,8 @@ internal class LogControlCenterService private constructor(val config: LogConfig
              * 当开始到结束时间的间隔在24小时以内，首选选择字符串上传，否则首选选择文件上传。
              */
             val logFiles = worker.filterFiles(escapeTimemillis(beginTime), escapeTimemillis(endTime))
+            Log.d(TAG, "筛选出要上传的文件列表：${logFiles}")
+            Log.d(TAG, "是否需要强制上传文件：${isForceFile}")
             if (isForceFile) {
                 forceUploadFiles(logFiles)
                 return@launch
@@ -190,6 +198,7 @@ internal class LogControlCenterService private constructor(val config: LogConfig
                 }
                 Log.d(TAG, "要上传的日志全部数据：\n${upLog}")
                 if (!isActive || upLog.length() == 0) return@launch
+                Log.d(TAG, "---------上传24小时内的日志内容：$upLog")
                 UploadService().apply {
                     try {
                         uploadFastLogs(upLog)
